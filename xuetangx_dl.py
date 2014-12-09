@@ -84,7 +84,7 @@ def main():
     courseware = r.content
     soup = BeautifulSoup(courseware)
     data = soup.find('nav',
-                     {'aria-label':'¿Î³Ìµ¼º½'})
+                     {'aria-label':'è¯¾ç¨‹å¯¼èˆª'})
 
     weeks_soup = data.find_all('div')
     weeks = []
@@ -136,8 +136,8 @@ def main():
     if not os.path.exists(dir):
         mkdir_p(dir)
 
-    for (lecture_url, lecture_name) in video_links:
-        filename = os.path.join(dir, lecture_name+ '.mp4')
+    for (lecnum, (lecture_url, lecture_name)) in enumerate(video_links):
+        filename = os.path.join(dir, '%02d_%s.mp4' %(lecnum+1, lecture_name))
         if overwrite or not os.path.exists(filename):
             print (filename)
             print (lecture_url)
