@@ -3,26 +3,24 @@
 
 from __future__ import print_function
 
-import argparse
 import md5
 import re
 import requests
 import os
 
-
-from utils import mkdir_p, DownloadProgress
+from utils import mkdir_p, download_file, parse_args
 
 def main():
     args = parse_args()
 
     user_email = args.username
     user_pswd = args.password
-    course_link = args.class_url[0]
+    course_link = args.course_url[0]
     path = args.path
     overwrite = args.overwrite
 
     regex = r'(?:https?://)(?P<site>[^/]+)/(?P<baseurl>[^/]+)/(?P<coursename>[^/]+)/?'
-    m = re.match(regex, args.class_url[0]) 
+    m = re.match(regex, args.course_url[0]) 
     if m is None:
         print ('The URL provided is not valid for icourse163.')
         sys.exit(0)
@@ -113,12 +111,14 @@ def main():
 
     r3 = session.post(getcourse_url,data = params)
 
+    print ('Parsing...', end="")
+
     syllabus = parse_syllabus_icourse163(session, r3.content)
 
     if syllabus:
-        print ('Parsing successful...')
+        print ('Successful.')
     else:
-        print ('Fail to parse the syllabus.')
+        print ('Failed.')
 
     print ('Save files to %s' % path)
 
@@ -126,31 +126,6 @@ def main():
 
 
 def download_syllabus_icourse163(session, leclist, path = '', overwrite = False):
-
-
-    for week in leclist:
-        cur_week = week[0]
-        lessons = week[1]
-        for lesson in lessons:
-            cur_lesson = lesson[0]
-            lectures = lesson[1]
-
-            dir = os.path.join(path, cur_week, cur_lesson)
-            if not os.path.exists(dir):
-                mkdir_p(dir)
-
-            for (lecnum, (lecture_url, lecture_name)) in enumerate(lectures):
-                filename = os.path.join(dir,"%02d_%s.%s"%(lecnum, lecture_name, lecture_url[-3:]))
-                if overwrite or not os.path.exists(filename):
-                    print ('Downloading...')
-                    print (filename)
-                    print (lecture_url)
-                    download_video_icourse163(session, lecture_url, filename )
-                else:
-                    print ('%s already downloaded' % filename)
-
-
-def download_video_icourse163(session, url, filename):
 
     headers = {
                 'Accept':'*/*',
@@ -163,47 +138,27 @@ def download_video_icourse163(session, url, filename):
                }
 
     session.headers.update(headers)
+	
+    for week in leclist:
+        cur_week = week[0]
+        lessons = week[1]
+        for lesson in lessons:
+            cur_lesson = lesson[0]
+            lectures = lesson[1]
 
-    attempts_count = 0
-    error_msg = ''
+            dir = os.path.join(path, cur_week, cur_lesson)
+            if not os.path.exists(dir):
+                mkdir_p(dir)
 
-    while attempts_count < 2:
+            for (lecnum, (lecture_url, lecture_name)) in enumerate(lectures):
+                filename = os.path.join(dir,"%02d_%s.%s"%(lecnum+1, lecture_name, lecture_url[-3:]))
+                if overwrite or not os.path.exists(filename):
+                    print (filename)
+                    print (lecture_url)
+                    download_file(session, lecture_url, filename )
+                else:
+                    print ('%s already downloaded' % filename)
 
-        r = session.get(url, stream = True)
-        if r.status_code is not 200:
-            if r.reason:
-                error_msg = r.reason + ' ' + str(r.status_code)
-            else:
-                error_msg = 'HTTP Error ' + str(r.status_code)
-
-            wait_interval = 2 ** (attempts_count + 1)
-            msg = 'Error downloading, will retry in {0} seconds ...'
-            print(msg.format(wait_interval))
-            time.sleep(wait_interval)
-            attempts_count += 1
-            continue
-
-        content_length = r.headers.get('content-length')
-        progress = DownloadProgress(content_length)
-        chunk_sz = 1048576 
-        #unifilename = unicode(filename,'utf8')
-
-        with open(filename, 'wb') as f:
-            progress.start()
-            while True:
-                data = r.raw.read(chunk_sz)                   
-                if not data:
-                    progress.stop()
-                    break
-                progress.read(len(data))
-
-                f.write(data)
-        r.close()
-        break
-
-    if attempts_count == 2:
-        print ('Skipping, can\'t download file ...')
-        print (error_msg)
 
 
 def parse_syllabus_icourse163(session, page):
@@ -225,6 +180,7 @@ def parse_syllabus_icourse163(session, page):
 
     for line in data:
 
+        print ('.', end="")
         s1 = re.search(week_reg, line)
         if s1:
             if lectures:
@@ -290,58 +246,6 @@ def parse_syllabus_icourse163(session, page):
 
     return term
 
-def parse_args():
-
-    parser = argparse.ArgumentParser(description = 'Download lecture material from icourse163.com')
-
-    
-    parser.add_argument('-u',
-                        '--username',
-                        dest='username',
-                        action='store',
-                        default=None,
-                        help='coursera username')
-
-    parser.add_argument('-p',
-                        '--password',
-                        dest='password',
-                        action='store',
-                        default=None,
-                        help='coursera password')
-
-    parser.add_argument('class_url',
-                        action='store',
-                        nargs='+',
-                        help='(e.g. "http://www.icourse163.org/learn/nudt-17003")')
-
-    # optional
-    parser.add_argument('--path',
-                        dest='path',
-                        action='store',
-                        default='',
-                        help='path to save the files')
-
-
-    parser.add_argument('-o',
-                        '--overwrite',
-                        dest='overwrite',
-                        action='store_true',
-                        default=False,
-                        help='whether existing files should be overwritten'
-                             ' (default: False)')
-
-    
-    args = parser.parse_args()
-
-
-    if not args.username:
-        print ('No username specified.')
-        sys.exit(1)
-    if not args.password:
-        print ('No password specified.')
-        sys.exit(1)
-    
-    return args
 
 if __name__ == '__main__':
     main()
