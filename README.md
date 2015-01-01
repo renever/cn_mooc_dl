@@ -24,10 +24,13 @@ cn_mooc_dl
 ####网易云课堂（`study.163.com`）：
     python study163_dl.py "url"
 
-* 网易云课堂不必登录。
-其中 url 是课程列表页面浏览器地址，比如:
+* 收费课程下不了
+* 网易云课堂不必登录。其中 url 是课程列表页面浏览器地址，比如:
 `http://study.163.com/course/introduction/334013.htm`
 
+ 
+ 
+ 
 
 
     --path 用于指定保存文件夹， --overwrite 指定是否覆盖
