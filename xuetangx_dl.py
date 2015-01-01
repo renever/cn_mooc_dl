@@ -12,11 +12,18 @@ import requests
 from bs4 import BeautifulSoup
 
 
-from utils import mkdir_p, download_file, parse_args
+from utils import mkdir_p, download_file, parse_args, clean_filename
 
 def main():
 
     args = parse_args()
+
+    if args.username is None:
+        print ('No username specified.')
+        sys.exit(1)
+    if args.password is None:
+        print ('No password specified.')
+        sys.exit(1)
 
     user_email = args.username
     user_pswd = args.password
@@ -107,13 +114,19 @@ def main():
     for link in links:
         r = session.get(link)
         page = r.content
-        vid_regexp = b'video/mp4&#34; src=&#34;(.+)&#34;'
-        fn_regexp = b'&lt;h2&gt; (.+) &lt;/h2&gt;'
+        vid_regexp = 'video/mp4&#34; src=&#34;(.+)&#34;'
+        #srt_chs_regexp = 'subtitles&#34; src=&#34;(.+)&#34; srclang=&#34;ch&#34' 
+        #srt_eng_regexp = 'subtitles&#34; src=&#34;(.+)&#34; srclang=&#34;en&#34'
+        fn_regexp = '&lt;h2&gt; (.+) &lt;/h2&gt;'
+
 
 
         id_container = re.findall(vid_regexp, page)
+        #srt_chs_container = re.findall(srt_chs_regexp, page)
+        #srt_eng_container = re.findall(srt_eng_regexp, page)
+
         fn_container = re.findall(fn_regexp, page)
-        vid_container = zip(id_container, fn_container)
+        vid_container = zip(id_container, fn_container) #, srt_container)
 
         for (id,fn) in vid_container:
             id2src_link = 'https://www.xuetangx.com/videoid2source/' + id
@@ -137,13 +150,11 @@ def main():
         mkdir_p(dir)
 
     for (lecnum, (lecture_url, lecture_name)) in enumerate(video_links):
+        lecture_name = clean_filename(lecture_name)
         filename = os.path.join(dir, '%02d_%s.mp4' %(lecnum+1, lecture_name))
-        if overwrite or not os.path.exists(filename):
-            print (filename)
-            print (lecture_url)
-            download_file(session, lecture_url, filename )
-        else:
-            print ('%s already downloaded' % filename)
+        print (filename)
+        print (lecture_url)
+        download_file(session, lecture_url, filename, overwrite )
 
 
 if __name__ == '__main__':

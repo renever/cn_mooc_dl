@@ -7,11 +7,19 @@ import md5
 import re
 import requests
 import os
+import sys
 
 from utils import mkdir_p, download_file, parse_args
 
 def main():
     args = parse_args()
+
+    if args.username is None:
+        print ('No username specified.')
+        sys.exit(1)
+    if args.password is None:
+        print ('No password specified.')
+        sys.exit(1)
 
     user_email = args.username
     user_pswd = args.password
@@ -25,7 +33,7 @@ def main():
         print ('The URL provided is not valid for icourse163.')
         sys.exit(0)
 
-    if m.group('site') in ['www.icourse163.org']:
+    if m.group('site') in ['www.icourse163.org', 'mooc.study.163.com']:
         path = os.path.join(path, m.group('coursename'))
     else:
         print ('The URL provided is not valid for icourse163.')
@@ -99,7 +107,7 @@ def main():
     params =  {
                 'callCount':1,
                 'scriptSessionId':'${scriptSessionId}190',
-                'httpSessionId':'e8890caec7fe435d944c0f318b932719',
+                #'httpSessionId':'e8890caec7fe435d944c0f318b932719',
                 'c0-scriptName':'CourseBean',
                 'c0-id': 0,
                 'c0-methodName':'getLastLearnedMocTermDto',
@@ -138,7 +146,7 @@ def download_syllabus_icourse163(session, leclist, path = '', overwrite = False)
                }
 
     session.headers.update(headers)
-	
+
     for week in leclist:
         cur_week = week[0]
         lessons = week[1]
@@ -152,12 +160,10 @@ def download_syllabus_icourse163(session, leclist, path = '', overwrite = False)
 
             for (lecnum, (lecture_url, lecture_name)) in enumerate(lectures):
                 filename = os.path.join(dir,"%02d_%s.%s"%(lecnum+1, lecture_name, lecture_url[-3:]))
-                if overwrite or not os.path.exists(filename):
-                    print (filename)
-                    print (lecture_url)
-                    download_file(session, lecture_url, filename )
-                else:
-                    print ('%s already downloaded' % filename)
+                print (filename)
+                print (lecture_url)
+                download_file(session, lecture_url, filename, overwrite )
+
 
 
 
@@ -165,10 +171,10 @@ def parse_syllabus_icourse163(session, page):
 
     data = page.splitlines(True)
 
-    vid_reg = b'contentId=([0-9]+);.+contentType=1;.+name=\"(.+)\";'
-    doc_id_reg = b'contentId=([0-9]+);.+contentType=3;'
-    lecture_reg = b'contentId=null.+name=\"(.+)\";.+releaseTime='
-    week_reg = b'contentId=null.+lessons=.+name=\"(.+)\";.+releaseTime='
+    vid_reg = 'contentId=([0-9]+);.+contentType=1;.+name=\"(.+)\";'
+    doc_id_reg = 'contentId=([0-9]+);.+contentType=3;'
+    lecture_reg = 'contentId=null.+name=\"(.+)\";.+releaseTime='
+    week_reg = 'contentId=null.+lessons=.+name=\"(.+)\";.+releaseTime='
 
     geturl_url = 'http://www.icourse163.org/dwr/call/plaincall/CourseBean.getLessonUnitLearnVo.dwr'
 
@@ -177,6 +183,13 @@ def parse_syllabus_icourse163(session, page):
     lectures = []
     cur_week = ''
     cur_lesson= ''
+
+    multi_resolution_flag = ['shdMp4Url',
+                            'videoSHDUrl',
+                            'hdMp4Url',
+                            'videoHDUrl',
+                            'sdMp4Url',
+                            'videoUrl']
 
     for line in data:
 
@@ -219,19 +232,13 @@ def parse_syllabus_icourse163(session, page):
                             }
                     r = session.post(geturl_url, data = params, cookies = session.cookies)
 
-                    # sd_url_reg = b'videoUrl:\"(.+)\"'
-                    # hd_url_reg = b'videoHDUrl:\"(.+)\"'
-                    # shd_url_reg = b'videoSHDUrl:\"(.+)\",'
-
-                    # The regex here is not strict enough, should be improved further.
-                    multi_resolution_reg = [b'videoSHDUrl:\"(.+)\",',b'videoHDUrl:\"(.+)\"',b'videoUrl:\"(.+)\"']
-
-                    for reg in multi_resolution_reg:
-                        s4 = re.search(reg, r.content)
-                        if s4:
-                            break
+                    s4 = re.search(r"{(?P<content>.*)}", r.content)
+                    info = dict(re.findall(r"(?P<name>.*?):(?P<value>.*?),", s4.group('content')))
                     
-                    lecture_url = s4.group(1)
+                    for res in multi_resolution_flag:
+                        if info[res] != 'null':
+                            lecture_url = info[res].strip('\"')
+                            break
                     lectures.append((lecture_url,lecture_name))
                     
                     continue

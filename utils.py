@@ -17,30 +17,31 @@ class DownloadProgress(object):
     Report download progress.
     Ripped from https://github.com/coursera-dl/
     """
-    def __init__(self, total):
+    def __init__(self, start, total):
         if total in [0, '0', None]:
             self._total = None
         else:
-            self._total = int(total)
+            self._total = long(total)
 
-        self._current = 0
-        self._start = 0
-        self._now = 0
+        self._current = long(start)
+        self._start = long(start)
+        self._time_start = 0
+        self._time_now = 0
 
         self._finished = False
 
     def start(self):
-        self._now = time.time()
-        self._start = self._now
+        self._time_now = time.time()
+        self._time_start = self._time_now
 
     def stop(self):
-        self._now = time.time()
+        self._time_now = time.time()
         self._finished = True
-        self._total = self._current
+        #self._total = self._current
         self.report_progress()
 
     def read(self, bytes):
-        self._now = time.time()
+        self._time_now = time.time()
         self._current += bytes
         self.report_progress()
 
@@ -52,10 +53,10 @@ class DownloadProgress(object):
         return '[{0: <50}] {1}%'.format(done * '>', percentage)
 
     def calc_speed(self):
-        dif = self._now - self._start
+        dif = self._time_now - self._time_start
         if self._current == 0 or dif < 0.001:  # One millisecond
-            return '---b/s'
-        return '{0}/s'.format(format_bytes(float(self._current) / dif))
+            return '---b/s    '
+        return '{0}/s    '.format(format_bytes(float(self._current - self._start) / dif))
 
     def report_progress(self):
         """
@@ -72,8 +73,10 @@ class DownloadProgress(object):
 
         if self._finished:
             print report
+            if self._total != self._current:
+                print ("***Downloading abort. This file should be downloaded again.***")
         else:
-            print report + "\r",
+            print (report + "\r"),
 
         sys.stdout.flush()               
 
@@ -109,15 +112,24 @@ def mkdir_p(path, mode=0o777):
         else:
             raise
 
-def download_file(session, url, filename):
+def download_file(session, url, filename, overwrite = False):
+
+    if os.path.exists(filename) and not overwrite:
+        resume_len = os.path.getsize(filename)
+        file_mode = 'ab'
+    else:
+        resume_len = 0   
+        file_mode = 'wb'     
 
     attempts_count = 0
     error_msg = ''
 
     while attempts_count < 2:
 
+        session.headers['Range'] = 'bytes=0-'
         r = session.get(url, stream = True)
-        if r.status_code is not 200:
+
+        if r.status_code != 200 and r.status_code != 206:
             if r.reason:
                 error_msg = r.reason + ' ' + str(r.status_code)
             else:
@@ -132,12 +144,22 @@ def download_file(session, url, filename):
                 continue
             else:
                 break
+        
+        total_length = long(r.headers.get('content-length'))
+        if resume_len == total_length:
+            print ('Already downloaded.')
+            break
 
-        content_length = r.headers.get('content-length')
-        progress = DownloadProgress(content_length)
+        assert resume_len<total_length
+        session.headers['Range'] = 'bytes=%d-' % (resume_len)
+        r = session.get(url, stream = True)  
+
+        
+
+        progress = DownloadProgress(resume_len, total_length)
         chunk_sz = 1048576 
 
-        with open(filename, 'wb') as f:
+        with open(filename, file_mode) as f:
             progress.start()
             while True:
                 data = r.raw.read(chunk_sz)                   
@@ -193,16 +215,30 @@ def parse_args():
                         default=False,
                         help='whether existing files should be overwritten'
                              ' (default: False)')
-
     
     args = parser.parse_args()
-
-
-    if not args.username:
-        print ('No username specified.')
-        sys.exit(1)
-    if not args.password:
-        print ('No password specified.')
-        sys.exit(1)
     
     return args
+
+def clean_filename(s, minimal_change=True):
+    """
+    Sanitize a string to be used as a filename.
+
+    If minimal_change is set to true, then we only strip the bare minimum of
+    characters that are problematic for filesystems (namely, ':', '/' and
+    '\x00', '\n').
+    """
+
+    # strip paren portions which contain trailing time length (...)
+    s = s.replace(':', '_').replace('/', '_').replace('\x00', '_').replace('\n', '').replace('\\','').replace('*','').replace('>','').replace('<','').replace('?','').replace('\"','').replace('|','')
+
+    if minimal_change:
+        return s
+
+    s = re.sub(r"\([^\(]*$", '', s)
+    s = s.replace('&nbsp;', '')
+    s = s.replace('?','')
+    s = s.replace('"','\'')
+    s = s.strip().replace(' ', '_')
+
+    return s
