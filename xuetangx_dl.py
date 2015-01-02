@@ -10,7 +10,7 @@ import sys
 import os
 import requests
 from bs4 import BeautifulSoup
-
+import HTMLParser
 
 from utils import mkdir_p, download_file, parse_args, clean_filename
 
@@ -90,71 +90,80 @@ def main():
     r = session.get(url)
     courseware = r.content
     soup = BeautifulSoup(courseware)
-    data = soup.find('nav',
-                     {'aria-label':'课程导航'})
+    data = soup.find('nav',{'aria-label':'课程导航'})
 
-    weeks_soup = data.find_all('div')
-    weeks = []
-    for week_soup in weeks_soup:
-        week_name = week_soup.h3.a.string
-        week_urls = [
-            '%s/%s' % (homepage, a['href'])
-            for a in week_soup.ul.find_all('a')
-        ]
+    syllabus = []
 
-        weeks.append((week_name, week_urls))
+    for week in data.find_all('div', {'class':'chapter'}):
+        week_name = clean_filename(week.h3.a.string)
+        week_content = []
+        for lesson in week.ul.find_all('a'):
+            lesson_name = lesson.p.getText()
+            lesson_url = homepage + lesson['href']
 
-    print ('.', end="")
+            r = session.get(lesson_url)
+            lesson_page = HTMLParser.HTMLParser().unescape(r.content.decode('utf8'))
+            lesson_soup = BeautifulSoup(lesson_page)
 
-    links = [lec_url for week in weeks for lec_url in week[1]]
+            lec_map = {}
+            tab_lists = lesson_soup.find_all('a',{'role':'tab'})
+            for tab in tab_lists:
+                lec_map[tab.get('id')] = tab.get('title')
+            
+            lesson_content = []
+            for tab in lesson_soup.find_all('div', attrs={'class':"seq_contents tex2jax_ignore asciimath2jax_ignore"}):
+                if tab.video is not None:
+                    get_vid_url = 'https://www.xuetangx.com/videoid2source/' + tab.source.get('src')
+                    r = session.get(get_vid_url)
+                    data = r.content
+                    resp = json.loads(data)
+                    if resp['sources']!=None and resp['sources']['quality20']!=None:
+                        tab_video_link = resp['sources']['quality20'][0]
+                    else:
+                        print ('Fail to get real src by vid')
+                        exit(2)
+                    
+                    tab_title = lec_map[tab.get('aria-labelledby')]
+                    tab_subs = tab.find_all('track',attrs={'kind':'subtitles'})
+                    tab_subs_url = []
+                    for sub in tab_subs:
+                        sub_url = 'https://www.xuetangx.com' + sub.get('src')
+                        tab_subs_url.append((sub_url, sub.get('srclang')))
+                    lesson_content.append((tab_title,tab_video_link,tab_subs_url)) 
+            
+            # exclude lessons without video                           
+            if lesson_content:
+                week_content.append((lesson_name, lesson_content))
 
-    video_links = []
-    subtitle_links = []
-
-    for link in links:
-        r = session.get(link)
-        page = r.content
-        vid_regexp = 'video/mp4&#34; src=&#34;(.+)&#34;'
-        #srt_chs_regexp = 'subtitles&#34; src=&#34;(.+)&#34; srclang=&#34;ch&#34' 
-        #srt_eng_regexp = 'subtitles&#34; src=&#34;(.+)&#34; srclang=&#34;en&#34'
-        fn_regexp = '&lt;h2&gt; (.+) &lt;/h2&gt;'
-
-
-
-        id_container = re.findall(vid_regexp, page)
-        #srt_chs_container = re.findall(srt_chs_regexp, page)
-        #srt_eng_container = re.findall(srt_eng_regexp, page)
-
-        fn_container = re.findall(fn_regexp, page)
-        vid_container = zip(id_container, fn_container) #, srt_container)
-
-        for (id,fn) in vid_container:
-            id2src_link = 'https://www.xuetangx.com/videoid2source/' + id
-            r = session.get(id2src_link)
-            data = r.content
-            resp = json.loads(data)
-            if resp['sources']!=None and resp['sources']['quality20']!=None:
-                video_links.append((resp['sources']['quality20'][0],fn.decode('utf8')))
-            else:
-                print ('Fail to get real src by vid')
-                exit(2)
             print ('.', end="")
-
+        if week_content:
+            syllabus.append((week_name, week_content))
 
     print ("successful")
 
     print ("Downloading...")
 
-    dir = os.path.join(path, coursename)
-    if not os.path.exists(dir):
-        mkdir_p(dir)
 
-    for (lecnum, (lecture_url, lecture_name)) in enumerate(video_links):
-        lecture_name = clean_filename(lecture_name)
-        filename = os.path.join(dir, '%02d_%s.mp4' %(lecnum+1, lecture_name))
-        print (filename)
-        print (lecture_url)
-        download_file(session, lecture_url, filename, overwrite )
+    for (week_num, (week_name, week_content)) in enumerate(syllabus):
+        week_name = '%02d %s' %(week_num+1, clean_filename(week_name))
+        for (lesson_num,(lesson_name, lesson_content)) in enumerate(week_content):
+
+            lesson_name = '%02d %s' %(lesson_num+1, clean_filename(lesson_name))
+            dir = os.path.join(path, coursename, week_name, lesson_name)
+            if not os.path.exists(dir):
+                mkdir_p(dir)
+
+            for (lec_num, (lec_title, lec_video_url, lec_subtitle)) in enumerate(lesson_content):
+                lec_title = '%02d %s' %(lec_num+1, clean_filename(lec_title))
+                vfilename = os.path.join(dir, lec_title)
+                print (lec_video_url)
+                print (vfilename + '.mp4')
+                download_file(session, lec_video_url, vfilename + '.mp4', overwrite )
+                for (sub_url, language) in lec_subtitle:
+                    sfilename = vfilename + '.' + language
+                    print (sub_url)
+                    print (sfilename + '.srt')
+                    download_file(session, sub_url, sfilename + '.srt', overwrite )
 
 
 if __name__ == '__main__':

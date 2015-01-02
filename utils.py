@@ -21,10 +21,10 @@ class DownloadProgress(object):
         if total in [0, '0', None]:
             self._total = None
         else:
-            self._total = long(total)
+            self._total = int(total)
 
-        self._current = long(start)
-        self._start = long(start)
+        self._current = int(start)
+        self._start = int(start)
         self._time_start = 0
         self._time_now = 0
 
@@ -37,7 +37,8 @@ class DownloadProgress(object):
     def stop(self):
         self._time_now = time.time()
         self._finished = True
-        #self._total = self._current
+        if self._total is None:
+            self._total = self._current
         self.report_progress()
 
     def read(self, bytes):
@@ -145,12 +146,13 @@ def download_file(session, url, filename, overwrite = False):
             else:
                 break
         
-        total_length = long(r.headers.get('content-length'))
-        if resume_len == total_length:
-            print ('Already downloaded.')
-            break
+        total_length = r.headers.get('content-length')
 
-        assert resume_len<total_length
+        if resume_len != 0:
+            if total_length is None or resume_len == int(total_length):
+                print ('Already downloaded.')
+                break
+
         session.headers['Range'] = 'bytes=%d-' % (resume_len)
         r = session.get(url, stream = True)  
 
@@ -230,7 +232,7 @@ def clean_filename(s, minimal_change=True):
     """
 
     # strip paren portions which contain trailing time length (...)
-    s = s.replace(':', '_').replace('/', '_').replace('\x00', '_').replace('\n', '').replace('\\','').replace('*','').replace('>','').replace('<','').replace('?','').replace('\"','').replace('|','')
+    s = s.replace(':', '_').replace('/', '_').replace('\x00', '_').replace('\n', '').replace('\\','').replace('*','').replace('>','').replace('<','').replace('?','').replace('\"','').replace('|','').replace(' ','')
 
     if minimal_change:
         return s
