@@ -8,52 +8,7 @@ import sys
 import requests
 import time
 
-from utils import mkdir_p, parse_args, clean_filename, DownloadProgress
-
-def download_file_study163(session, url, filename):
-
-    attempts_count = 0
-    error_msg = ''
-
-    while attempts_count < 2:
-
-        r = session.get(url, stream = True)
-        if r.status_code is not 200:
-            if r.reason:
-                error_msg = r.reason + ' ' + str(r.status_code)
-            else:
-                error_msg = 'HTTP Error ' + str(r.status_code)
-            
-            if attempts_count + 1 < 2:
-                wait_interval = 2 ** (attempts_count + 1)
-                msg = 'Error downloading, will retry in {0} seconds ...'
-                print(msg.format(wait_interval))
-                time.sleep(wait_interval)
-                attempts_count += 1
-                continue
-            else:
-                break
-
-        content_length = r.headers.get('content-length')
-        progress = DownloadProgress(0, content_length)
-        chunk_sz = 1048576 
-
-        with open(filename, 'wb') as f:
-            progress.start()
-            while True:
-                data = r.raw.read(chunk_sz)                   
-                if not data:
-                    progress.stop()
-                    break
-                progress.read(len(data))
-
-                f.write(data)
-        r.close()
-        break
-
-    if attempts_count == 2:
-        print ('Skipping, can\'t download file ...')
-        print (error_msg)
+from utils import mkdir_p, parse_args, clean_filename, DownloadProgress, download_file
 
 def download_syllabus_study163(session, syllabus, path = '', overwrite = False):
 
@@ -70,7 +25,7 @@ def download_syllabus_study163(session, syllabus, path = '', overwrite = False):
             
     course_id = syllabus[0]
     course = syllabus[1]
-    
+    retry_list = []
     for (chapter_num,(chapter, lessons)) in enumerate(course):
         chapter_name = clean_filename(chapter)
         dir = os.path.join(path, ('%02d %s'% (chapter_num+1, chapter_name)))
@@ -81,16 +36,45 @@ def download_syllabus_study163(session, syllabus, path = '', overwrite = False):
             lesson_name = clean_filename(lesson_name.decode('raw_unicode_escape'))
             filename = os.path.join(dir, '%02d_%s.%s' %(lesson_num+1, lesson_name, fmt))
             print(filename)
-            r = session.get(get_token_url)
-            video_url_suffix = '88C752A6C3513A0A5EEFA4CD7091A96E365D0185B8133CC883910200B043BC0F57E3024A35D1C582757D905A6B9289E9f4eej632de59'\
-                                 + r.content 
-            video_url = lesson_url + '?key=' + video_url_suffix
+
             if overwrite or not os.path.exists(filename):
-                download_file_study163(session, video_url, filename )
+                try:
+                    r = session.get(get_token_url)
+                    video_url_suffix = '88C752A6C3513A0A5EEFA4CD7091A96E365D0185B8133CC883910200B043BC0F57E3024A35D1C582757D905A6B9289E9f4eej632de59'\
+                                         + r.content 
+                    video_url = lesson_url + '?key=' + video_url_suffix
+                    download_file(session, video_url, filename )
+                except Exception as e:
+                    print(e)
+                    print('Error, but continue, add it to retry list')
+                    retry_list.append((lesson_url, filename))
             else:
                 print ('Already downloaded')
 
+    retry_times = 0
+    while len(retry_list) != 0 and retry_times < 3:
+        print('%d items should be retried, retrying...' % len(retry_list))
+        retry_times += 1
+        for (url, filename) in retry_list:
+            try:
+                print(url)
+                print(filename)
+                r = session.get(get_token_url)
+                video_url_suffix = '88C752A6C3513A0A5EEFA4CD7091A96E365D0185B8133CC883910200B043BC0F57E3024A35D1C582757D905A6B9289E9f4eej632de59'\
+                                        + r.content 
+                video_url = url + '?key=' + video_url_suffix
+                download_file(session, video_url, filename )
+            except Exception as e:
+                print(e)
+                print('Error, but continue, add it to retry list')
+                continue
 
+            retry_list.remove((url, filname)) 
+    
+    if len(retry_list) != 0:
+        print('%d items failed, please check it' % len(retry_list))
+    else:
+        print('All done.')    
 
 def parse_syllabus_study163(session, page):
     data = page.splitlines(True)

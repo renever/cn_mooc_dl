@@ -9,7 +9,7 @@ import requests
 import os
 import sys
 
-from utils import mkdir_p, download_file, parse_args
+from utils import mkdir_p, resume_download_file, parse_args
 
 def main():
     args = parse_args()
@@ -147,6 +147,7 @@ def download_syllabus_icourse163(session, leclist, path = '', overwrite = False)
 
     session.headers.update(headers)
 
+    retry_list = []
     for week in leclist:
         cur_week = week[0]
         lessons = week[1]
@@ -162,8 +163,33 @@ def download_syllabus_icourse163(session, leclist, path = '', overwrite = False)
                 filename = os.path.join(dir,"%02d_%s.%s"%(lecnum+1, lecture_name, lecture_url[-3:]))
                 print (filename)
                 print (lecture_url)
-                download_file(session, lecture_url, filename, overwrite )
+                try:
+                    resume_download_file(session, lecture_url, filename, overwrite )
+                except Exception as e:
+                    print(e)
+                    print('Error, but continue, add it to retry list')
+                    retry_list.append((lecture_url, filename))
 
+    retry_times = 0
+    while len(retry_list) != 0 and retry_times < 3:
+        print('%d items should be retried, retrying...' % len(retry_list))
+        retry_times += 1
+        for (url, filename) in retry_list:
+            try:
+                print(url)
+                print(filename)
+                resume_download_file(session, url, filename, overwrite )
+            except Exception as e:
+                print(e)
+                print('Error, but continue, add it to retry list')
+                continue
+
+            retry_list.remove((url, filname)) 
+    
+    if len(retry_list) != 0:
+        print('%d items failed, please check it' % len(retry_list))
+    else:
+        print('All done.')
 
 
 

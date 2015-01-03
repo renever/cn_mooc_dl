@@ -12,7 +12,7 @@ import requests
 from bs4 import BeautifulSoup
 import HTMLParser
 
-from utils import mkdir_p, download_file, parse_args, clean_filename
+from utils import mkdir_p, resume_download_file, download_file, parse_args, clean_filename
 
 def main():
 
@@ -31,7 +31,7 @@ def main():
     path = args.path
     overwrite = args.overwrite
 
-    regex = r'(?:https?://)(?P<site>[^/]+)/(?P<baseurl>[^/]+)/(?P<institution>[^/]+)/(?P<coursename>[^/]+)/(?P<offering>[^/]+).*'
+    regex = r'(?:https?://)?(?P<site>[^/]+)/(?P<baseurl>[^/]+)/(?P<institution>[^/]+)/(?P<coursename>[^/]+)/(?P<offering>[^/]+).*'
     m = re.match(regex, course_link)  
 
     if m is None:
@@ -117,11 +117,17 @@ def main():
                     r = session.get(get_vid_url)
                     data = r.content
                     resp = json.loads(data)
-                    if resp['sources']!=None and resp['sources']['quality20']!=None:
+                    if resp['sources']!=None: 
+                        if resp['sources']['quality20']:
                         tab_video_link = resp['sources']['quality20'][0]
+                        elif resp['sources']['quality10']:
+                            tab_video_link = resp['sources']['quality10'][0]
                     else:
-                        print ('Fail to get real src by vid')
-                        exit(2)
+                            print('\nATTENTION: Video Missed for \"%s\"' %lec_map[tab.get('aria-labelledby')])
+                            continue
+                    else:
+                        print('\nATTENTION: Faile to git video for \"%s\"' %lec_map[tab.get('aria-labelledby')])
+                        continue
                     
                     tab_title = lec_map[tab.get('aria-labelledby')]
                     tab_subs = tab.find_all('track',attrs={'kind':'subtitles'})
@@ -143,7 +149,7 @@ def main():
 
     print ("Downloading...")
 
-
+    retry_list = []
     for (week_num, (week_name, week_content)) in enumerate(syllabus):
         week_name = '%02d %s' %(week_num+1, clean_filename(week_name))
         for (lesson_num,(lesson_name, lesson_content)) in enumerate(week_content):
@@ -158,12 +164,48 @@ def main():
                 vfilename = os.path.join(dir, lec_title)
                 print (lec_video_url)
                 print (vfilename + '.mp4')
-                download_file(session, lec_video_url, vfilename + '.mp4', overwrite )
+                try:
+                    resume_download_file(session, lec_video_url, vfilename + '.mp4', overwrite )
+                except Exception as e:
+                    print(e)
+                    print('Error, but continue, add it to retry list')
+                    retry_list.append((lec_video_url, vfilename + '.mp4'))
+
                 for (sub_url, language) in lec_subtitle:
                     sfilename = vfilename + '.' + language
                     print (sub_url)
                     print (sfilename + '.srt')
-                    download_file(session, sub_url, sfilename + '.srt', overwrite )
+                    if not os.path.exists(sfilename + '.srt') or overwrite:
+                        try:
+                            download_file(session, sub_url, sfilename + '.srt')
+                        except Exception as e:
+                            print (e)
+                            print('Error, but continue, add it to retry list')
+                            retry_list.append((sub_url, sfilename + '.srt'))
+                            continue
+                    else:
+                        print ('Already downloaded.')
+
+    retry_times = 0
+    while len(retry_list) != 0 and retry_times < 3:
+        print('%d items should be retried, retrying...' % len(retry_list))
+        retry_times += 1
+        for (url, filename) in retry_list:
+            try:
+                print(url)
+                print(filename)
+                resume_download_file(session, url, filename, overwrite )
+            except Exception as e:
+                print(e)
+                print('Error, but continue, add it to retry list')
+                continue
+
+            retry_list.remove((url, filname)) 
+    
+    if len(retry_list) != 0:
+        print('%d items failed, please check it' % len(retry_list))
+    else:
+        print('All done.')
 
 
 if __name__ == '__main__':

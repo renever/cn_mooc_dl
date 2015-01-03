@@ -11,6 +11,7 @@ import sys
 import os
 import argparse
 import re
+import zlib
 
 class DownloadProgress(object):
     """
@@ -113,7 +114,50 @@ def mkdir_p(path, mode=0o777):
         else:
             raise
 
-def download_file(session, url, filename, overwrite = False):
+def download_file(session, url, filename):
+
+    attempts_count = 0
+    error_msg = ''
+
+    while attempts_count < 2:
+
+        r = session.get(url, stream = True)
+        if r.status_code is not 200:
+            if r.reason:
+                error_msg = r.reason + ' ' + str(r.status_code)
+            else:
+                error_msg = 'HTTP Error ' + str(r.status_code)
+            
+            if attempts_count + 1 < 2:
+                wait_interval = 2 ** (attempts_count + 1)
+                msg = 'Error downloading, will retry in {0} seconds ...'
+                print(msg.format(wait_interval))
+                time.sleep(wait_interval)
+                attempts_count += 1
+                continue
+            else:
+                raise Exception('Connection Error: %s' % error_msg)
+
+        content_length = r.headers.get('content-length')
+        progress = DownloadProgress(0, content_length)
+        chunk_sz = 1048576 
+
+        with open(filename, 'wb') as f:
+            progress.start()
+            while True:
+                data = r.raw.read(chunk_sz)                   
+                if not data:
+                    progress.stop()
+                    break
+                progress.read(len(data))
+                if r.headers.get('Content-Encoding') == 'gzip':
+                    data = zlib.decompress(data,16+zlib.MAX_WBITS)
+                f.write(data)
+        r.close()
+        break
+
+
+def resume_download_file(session, url, filename, overwrite = False):
 
     if os.path.exists(filename) and not overwrite:
         resume_len = os.path.getsize(filename)
@@ -144,7 +188,7 @@ def download_file(session, url, filename, overwrite = False):
                 attempts_count += 1
                 continue
             else:
-                break
+                raise Exception('Connection Error: %s' % error_msg)
         
         total_length = r.headers.get('content-length')
 
@@ -169,14 +213,12 @@ def download_file(session, url, filename, overwrite = False):
                     progress.stop()
                     break
                 progress.read(len(data))
-
+                if r.headers.get('Content-Encoding') == 'gzip':
+                    data = zlib.decompress(data,16+zlib.MAX_WBITS)
                 f.write(data)
         r.close()
         break
 
-    if attempts_count == 2:
-        print ('Skipping, can\'t download file ...')
-        print (error_msg)
 
 def parse_args():
 
@@ -232,7 +274,19 @@ def clean_filename(s, minimal_change=True):
     """
 
     # strip paren portions which contain trailing time length (...)
-    s = s.replace(':', '_').replace('/', '_').replace('\x00', '_').replace('\n', '').replace('\\','').replace('*','').replace('>','').replace('<','').replace('?','').replace('\"','').replace('|','').replace(' ','')
+    s = s.replace(':', '_') \
+        .replace('/', '_')\
+        .replace('\x00', '_')\
+        .replace('\n', '')\
+        .replace('\\','')\
+        .replace('*','')\
+        .replace('>','')\
+        .replace('<','')\
+        .replace('?','')\
+        .replace('\"','')\
+        .replace('|','')\
+        .replace(' ','')\
+        .replace('\t','')
 
     if minimal_change:
         return s
