@@ -41,6 +41,8 @@ class DownloadProgress(object):
         if self._total is None:
             self._total = self._current
         self.report_progress()
+        if self._total != self._current:
+            raise Exception('Error: Stopped abnormally.')
 
     def read(self, bytes):
         self._time_now = time.time()
@@ -75,8 +77,6 @@ class DownloadProgress(object):
 
         if self._finished:
             print report
-            if self._total != self._current:
-                print ("***Downloading abort. This file should be downloaded again.***")
         else:
             print (report + "\r"),
 

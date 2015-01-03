@@ -9,7 +9,7 @@ import requests
 import os
 import sys
 
-from utils import mkdir_p, resume_download_file, parse_args
+from utils import mkdir_p, resume_download_file, parse_args, clean_filename
 
 def main():
     args = parse_args()
@@ -34,7 +34,7 @@ def main():
         sys.exit(0)
 
     if m.group('site') in ['www.icourse163.org', 'mooc.study.163.com']:
-        path = os.path.join(path, m.group('coursename'))
+        path = os.path.join(path, clean_filename(m.group('coursename')))
     else:
         print ('The URL provided is not valid for icourse163.')
         sys.exit(0)

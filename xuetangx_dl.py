@@ -119,12 +119,12 @@ def main():
                     resp = json.loads(data)
                     if resp['sources']!=None: 
                         if resp['sources']['quality20']:
-                        tab_video_link = resp['sources']['quality20'][0]
+                            tab_video_link = resp['sources']['quality20'][0]
                         elif resp['sources']['quality10']:
                             tab_video_link = resp['sources']['quality10'][0]
-                    else:
-                            print('\nATTENTION: Video Missed for \"%s\"' %lec_map[tab.get('aria-labelledby')])
-                            continue
+                        else:
+                                print('\nATTENTION: Video Missed for \"%s\"' %lec_map[tab.get('aria-labelledby')])
+                                continue
                     else:
                         print('\nATTENTION: Faile to git video for \"%s\"' %lec_map[tab.get('aria-labelledby')])
                         continue
