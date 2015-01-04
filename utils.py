@@ -12,6 +12,7 @@ import os
 import argparse
 import re
 import zlib
+import errno
 
 class DownloadProgress(object):
     """
@@ -145,13 +146,11 @@ def download_file(session, url, filename):
         with open(filename, 'wb') as f:
             progress.start()
             while True:
-                data = r.raw.read(chunk_sz)                   
+                data = r.raw.read(chunk_sz, decode_content=True)                   
                 if not data:
                     progress.stop()
                     break
                 progress.read(len(data))
-                if r.headers.get('Content-Encoding') == 'gzip':
-                    data = zlib.decompress(data,16+zlib.MAX_WBITS)
                 f.write(data)
         r.close()
         break
@@ -208,13 +207,11 @@ def resume_download_file(session, url, filename, overwrite = False):
         with open(filename, file_mode) as f:
             progress.start()
             while True:
-                data = r.raw.read(chunk_sz)                   
+                data = r.raw.read(chunk_sz, decode_content=True)                   
                 if not data:
                     progress.stop()
                     break
                 progress.read(len(data))
-                if r.headers.get('Content-Encoding') == 'gzip':
-                    data = zlib.decompress(data,16+zlib.MAX_WBITS)
                 f.write(data)
         r.close()
         break

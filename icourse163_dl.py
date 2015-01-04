@@ -167,24 +167,25 @@ def download_syllabus_icourse163(session, leclist, path = '', overwrite = False)
                     resume_download_file(session, lecture_url, filename, overwrite )
                 except Exception as e:
                     print(e)
-                    print('Error, but continue, add it to retry list')
+                    print('Error, add it to retry list')
                     retry_list.append((lecture_url, filename))
 
     retry_times = 0
     while len(retry_list) != 0 and retry_times < 3:
         print('%d items should be retried, retrying...' % len(retry_list))
+        tmp_list = [item for item in retry_list]
         retry_times += 1
-        for (url, filename) in retry_list:
+        for (url, filename) in tmp_list:
             try:
                 print(url)
                 print(filename)
                 resume_download_file(session, url, filename, overwrite )
             except Exception as e:
                 print(e)
-                print('Error, but continue, add it to retry list')
+                print('Error, add it to retry list')
                 continue
 
-            retry_list.remove((url, filname)) 
+            retry_list.remove((url, filename)) 
     
     if len(retry_list) != 0:
         print('%d items failed, please check it' % len(retry_list))

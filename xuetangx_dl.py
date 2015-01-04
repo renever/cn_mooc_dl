@@ -12,7 +12,7 @@ import requests
 from bs4 import BeautifulSoup
 import HTMLParser
 
-from utils import mkdir_p, resume_download_file, download_file, parse_args, clean_filename
+from utils import *
 
 def main():
 
@@ -168,7 +168,7 @@ def main():
                     resume_download_file(session, lec_video_url, vfilename + '.mp4', overwrite )
                 except Exception as e:
                     print(e)
-                    print('Error, but continue, add it to retry list')
+                    print('Error, add it to retry list')
                     retry_list.append((lec_video_url, vfilename + '.mp4'))
 
                 for (sub_url, language) in lec_subtitle:
@@ -180,7 +180,7 @@ def main():
                             download_file(session, sub_url, sfilename + '.srt')
                         except Exception as e:
                             print (e)
-                            print('Error, but continue, add it to retry list')
+                            print('Error, add it to retry list')
                             retry_list.append((sub_url, sfilename + '.srt'))
                             continue
                     else:
@@ -197,10 +197,10 @@ def main():
                 resume_download_file(session, url, filename, overwrite )
             except Exception as e:
                 print(e)
-                print('Error, but continue, add it to retry list')
+                print('Error, add it to retry list')
                 continue
 
-            retry_list.remove((url, filname)) 
+            retry_list.remove((url, filename)) 
     
     if len(retry_list) != 0:
         print('%d items failed, please check it' % len(retry_list))

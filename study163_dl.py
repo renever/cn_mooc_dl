@@ -46,7 +46,7 @@ def download_syllabus_study163(session, syllabus, path = '', overwrite = False):
                     download_file(session, video_url, filename )
                 except Exception as e:
                     print(e)
-                    print('Error, but continue, add it to retry list')
+                    print('Error, add it to retry list')
                     retry_list.append((lesson_url, filename))
             else:
                 print ('Already downloaded')
@@ -54,8 +54,9 @@ def download_syllabus_study163(session, syllabus, path = '', overwrite = False):
     retry_times = 0
     while len(retry_list) != 0 and retry_times < 3:
         print('%d items should be retried, retrying...' % len(retry_list))
+        tmp_list = [item for item in retry_list]
         retry_times += 1
-        for (url, filename) in retry_list:
+        for (url, filename) in tmp_list:
             try:
                 print(url)
                 print(filename)
@@ -66,10 +67,10 @@ def download_syllabus_study163(session, syllabus, path = '', overwrite = False):
                 download_file(session, video_url, filename )
             except Exception as e:
                 print(e)
-                print('Error, but continue, add it to retry list')
+                print('Error, add it to retry list')
                 continue
 
-            retry_list.remove((url, filname)) 
+            retry_list.remove((url, filename)) 
     
     if len(retry_list) != 0:
         print('%d items failed, please check it' % len(retry_list))
