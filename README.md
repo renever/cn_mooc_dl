@@ -31,7 +31,7 @@ cn_mooc_dl
 ####云课堂计算机专业课程（`mooc.study.163.com`）： 
     python icourse163_dl.py  -u <username@xxx.xxx> -p <password>  "url" 
 * 云课堂新增专栏“计算机专业课程”，虽然挂在云课堂页面上，但是里面的结构是和“中国大学 MOOC”一样的。所以要用 `icourse163_dl.py` 来下载。
-* 其中 url 类似这样： `http://www.icourse163.org/learn/zju-93001`
+* 其中 url 类似这样： `http://mooc.study.163.com/learn/ZJU-1000002014`
 
 
 #####--path 用于指定保存文件夹， --overwrite 指定是否覆盖
