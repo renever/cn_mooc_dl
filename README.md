@@ -12,7 +12,6 @@ cn_mooc_dl
 以“国防科大高等数学（一）”为例，打开课程后浏览器地址栏显示为：
 `http://www.icourse163.org/learn/nudt-9004#/learn/announce`
 则 url 为 `http://www.icourse163.org/learn/nudt-9004`
-
 * 网易流量时快时慢，时有时无。可以运行两遍，之前没下完的可断线续传。
 
 ####清华学堂在线（`xuetangx.com`）：    
@@ -23,14 +22,19 @@ cn_mooc_dl
 
 ####网易云课堂（`study.163.com`）：
     python study163_dl.py "url"
-
-* 收费课程下不了
+* 云课堂新增专栏“计算机专业课程”那一部分（mooc.study.163.com）有点特殊，具体看下面。
+* 收费课程下不了。
 * 网易云课堂不必登录。其中 url 是课程列表页面浏览器地址，比如:
 `http://study.163.com/course/introduction/334013.htm`
 
  
- 
- 
+####云课堂计算机专业课程（`mooc.study.163.com`）： 
+    python icourse163_dl.py  -u <username@xxx.xxx> -p <password>  "url" 
+* 云课堂新增专栏“计算机专业课程”，虽然挂在云课堂页面上，但是里面的结构是和“中国大学 MOOC”一样的。所以要用 `icourse163_dl.py` 来下载。
+* 其中 url 类似这样： `http://www.icourse163.org/learn/zju-93001`
 
 
-    --path 用于指定保存文件夹， --overwrite 指定是否覆盖
+#####--path 用于指定保存文件夹， --overwrite 指定是否覆盖
+
+
+matthieu.lin@gmail.com

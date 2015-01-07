@@ -33,11 +33,40 @@ def main():
         print ('The URL provided is not valid for icourse163.')
         sys.exit(0)
 
-    if m.group('site') in ['www.icourse163.org', 'mooc.study.163.com']:
-        path = os.path.join(path, clean_filename(m.group('coursename')))
+    md = md5.new()
+    md.update(user_pswd)
+    encryptedpswd =  md.hexdigest()
+
+    if m.group('site') in ['www.icourse163.org']:
+        login_data = {
+                'product': 'imooc',
+                'url': 'http://www.icourse163.org/mooc.htm?#/index',
+                'savelogin': 1,
+                'domains': 'icourse163.org',
+                'type': 0,
+                'append': 1,
+                'username': user_email,
+                'password': encryptedpswd
+                }
+        login_success_flag = '正在登录，请稍等...'
+        web_host = 'www.icourse163.org'
+    elif m.group('site') in [ 'mooc.study.163.com']:
+        login_data = {
+                'product': 'study',
+                'url': 'http://study.163.com?from=study',
+                'savelogin': 1,
+                'domains': '163.com',
+                'type': 0,
+                'append': 1,
+                'username': user_email,
+                'password': encryptedpswd
+                }        
+        login_success_flag = '登录成功，正在跳转'
+        web_host = 'mooc.study.163.com'
     else:
         print ('The URL provided is not valid for icourse163.')
         sys.exit(0)
+    path = os.path.join(path, clean_filename(m.group('coursename')))
 
     login_url = 'https://reg.163.com/logins.jsp'
 
@@ -48,27 +77,13 @@ def main():
                 'Connection': 'keep-alive',
                }
 
-    m = md5.new()
-    m.update(user_pswd)
-    encryptedpswd =  m.hexdigest()
-    post_data = {
-                'product': 'imooc',
-                'url': 'http://www.icourse163.org/mooc.htm?#/index',
-                'savelogin': 1,
-                'domains': 'icourse163.org',
-                'type': 0,
-                'append': 1,
-                'username': user_email,
-                'password': encryptedpswd
-                }
-
 
     session = requests.Session()
     session.headers.update(headers)
-    r1 = session.post(login_url,data = post_data)
+    r1 = session.post(login_url, data=login_data)
 
     
-    success = re.search('正在登录，请稍等...',r1.content)
+    success = re.search(login_success_flag, r1.content)
     if not success:
         print ('Fail to login.')
         exit(2)
@@ -77,11 +92,7 @@ def main():
     
     se = re.search('window.location.replace\(\"(.+)\"\)',r1.content)
         
-    r = session.get(se.group(1), allow_redirects=False, cookies = {'NTES_PASSPORT':session.cookies['NTES_PASSPORT']})
-
-    # set-cookie: "STUDY_SESS"
-    rr = session.get('http://www.icourse163.org/mooc.htm?',allow_redirects=False)
-    rrr = session.get(rr.headers['Location'])
+    r = session.get(se.group(1), allow_redirects=True, cookies = {'NTES_PASSPORT':session.cookies['NTES_PASSPORT']})
 
     # get course id, it's in cid.group(1)
     r2 = session.get(course_link)
@@ -96,10 +107,8 @@ def main():
                 'Accept-Language': 'zh-CN,zh;q=0.8,en;q=0.6,zh-TW;q=0.4',
                 'Connection': 'keep-alive',
                 'Content-Type': 'text/plain',
-                'Cookie':'STUDY_SESS=%s; '% session.cookies['STUDY_SESS'],
-                'Host':'www.icourse163.org',
-                'Origin':'http://www.icourse163.org',
-                'Referer':'http://www.icourse163.org/learn/swjtu-94001',
+                'Cookie': 'STUDY_SESS=%s; '% session.cookies['STUDY_SESS'],
+                'Host': web_host,
                }
 
     session.headers.update(headers)
@@ -107,7 +116,7 @@ def main():
     params =  {
                 'callCount':1,
                 'scriptSessionId':'${scriptSessionId}190',
-                #'httpSessionId':'e8890caec7fe435d944c0f318b932719',
+                'httpSessionId':'e8890caec7fe435d944c0f318b932719',
                 'c0-scriptName':'CourseBean',
                 'c0-id': 0,
                 'c0-methodName':'getLastLearnedMocTermDto',
@@ -263,7 +272,7 @@ def parse_syllabus_icourse163(session, page):
                     info = dict(re.findall(r"(?P<name>.*?):(?P<value>.*?),", s4.group('content')))
                     
                     for res in multi_resolution_flag:
-                        if info[res] != 'null':
+                        if info.has_key(res) and info[res] != 'null':
                             lecture_url = info[res].strip('\"')
                             break
                     lectures.append((lecture_url,lecture_name))
