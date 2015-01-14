@@ -145,7 +145,7 @@ def parse_syllabus_study163(session, page):
                 info = dict(re.findall(r"(?P<name>.*?):(?P<value>.*?),", s.group('content')))
                     
                 for res in multi_resolution_flag:
-                    if info[res] != 'null':
+                    if info.has_key(res) and info[res] != 'null':
                         lesson_url = info[res].strip('\"')
                         break
   
