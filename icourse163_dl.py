@@ -268,7 +268,7 @@ def parse_syllabus_icourse163(session, page):
                             }
                     r = session.post(geturl_url, data = params, cookies = session.cookies)
 
-                    s4 = re.search(r"{(?P<content>.*)}", r.content)
+                    s4 = re.search(r"{(?P<content>.+)}", r.content)
                     info = dict(re.findall(r"(?P<name>.*?):(?P<value>.*?),", s4.group('content')))
                     
                     for res in multi_resolution_flag:
