@@ -163,12 +163,14 @@ def download_syllabus_icourse163(session, leclist, path = '', overwrite = False)
         for lesson in lessons:
             cur_lesson = lesson[0]
             lectures = lesson[1]
-
+            cur_week = clean_filename(cur_week)
+            cur_lesson = clean_filename(cur_lesson)
             dir = os.path.join(path, cur_week, cur_lesson)
             if not os.path.exists(dir):
                 mkdir_p(dir)
 
             for (lecnum, (lecture_url, lecture_name)) in enumerate(lectures):
+                lecture_name = clean_filename(lecture_name)
                 filename = os.path.join(dir,"%02d_%s.%s"%(lecnum+1, lecture_name, lecture_url[-3:]))
                 print (filename)
                 print (lecture_url)

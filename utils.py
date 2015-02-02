@@ -245,7 +245,7 @@ def parse_args():
     parser.add_argument('--path',
                         dest='path',
                         action='store',
-                        default='',
+                        default='.',
                         help='path to save the files')
 
 
@@ -260,6 +260,7 @@ def parse_args():
     args = parser.parse_args()
     
     return args
+
 
 def clean_filename(s, minimal_change=True):
     """
@@ -282,7 +283,6 @@ def clean_filename(s, minimal_change=True):
         .replace('?','')\
         .replace('\"','')\
         .replace('|','')\
-        .replace(' ','')\
         .replace('\t','')
 
     if minimal_change:
