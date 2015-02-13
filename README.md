@@ -4,6 +4,16 @@ cn_mooc_dl
 1. 中国大学 MOOC（`icourse163.org`）视频下载
 2. 清华学堂在线（`xuetangx.com`）视频下载
 3. 网易云课堂（`study.163.com`）视频下载
+4. 网易云课堂计算机专业课程（`mooc.study.163.com`）视频下载
+
+####测试环境：   `PYTHON 2.7； WIN 7`
+####依赖包： `requests， beautifulsoup4`
+	pip install requests
+	pip install beautifulsoup4
+或者在代码目录下
+	
+	pip install -r requirements.txt 
+
 
 ####中国大学 MOOC（`icourse163.org`）：
     python icourse163_dl.py  -u <username@xxx.xxx> -p <password>  "url"
@@ -26,6 +36,7 @@ cn_mooc_dl
 * 收费课程下不了。
 * 网易云课堂不必登录。其中 url 是课程列表页面浏览器地址，比如:
 `http://study.163.com/course/introduction/334013.htm`
+* 不能续传。
 
  
 ####云课堂计算机专业课程（`mooc.study.163.com`）： 

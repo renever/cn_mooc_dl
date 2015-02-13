@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
@@ -88,7 +87,7 @@ def main():
         print ('Fail to login.')
         exit(2)
     else:
-        print ('Login successful...')
+        print ('Login done...')
     
     se = re.search('window.location.replace\(\"(.+)\"\)',r1.content)
         
@@ -133,9 +132,10 @@ def main():
     syllabus = parse_syllabus_icourse163(session, r3.content)
 
     if syllabus:
-        print ('Successful.')
+        print ('Done.')
     else:
-        print ('Failed.')
+        print ('Failed. No course content on the page.')
+        sys.exit(0)
 
     print ('Save files to %s' % path)
 
@@ -285,9 +285,10 @@ def parse_syllabus_icourse163(session, page):
                 #s5 = re.search(doc_id_reg, line)
                 #if s5:
                 #    print ('      ' + s5.group(1) )
-
-    lessons.append((cur_lesson, lectures))
-    term.append((cur_week, lessons))
+    if len(lectures) > 0:
+        lessons.append((cur_lesson, lectures))
+    if len(lessons) > 0:
+        term.append((cur_week, lessons))
 
     return term
 

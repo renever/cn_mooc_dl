@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
@@ -80,7 +79,7 @@ def main():
         print('Problems suppling credentials to xuetangx.')
         exit(2)
 
-    print ('Login successful...')
+    print ('Login done...')
 
     print ('Parsing...', end="")
     course_urls = []
@@ -123,8 +122,8 @@ def main():
                         elif resp['sources']['quality10']:
                             tab_video_link = resp['sources']['quality10'][0]
                         else:
-                                print('\nATTENTION: Video Missed for \"%s\"' %lec_map[tab.get('aria-labelledby')])
-                                continue
+                            print('\nATTENTION: Video Missed for \"%s\"' %lec_map[tab.get('aria-labelledby')])
+                            continue
                     else:
                         print('\nATTENTION: Faile to git video for \"%s\"' %lec_map[tab.get('aria-labelledby')])
                         continue
@@ -145,7 +144,7 @@ def main():
         if week_content:
             syllabus.append((week_name, week_content))
 
-    print ("successful")
+    print ("Done.")
 
     print ("Downloading...")
 

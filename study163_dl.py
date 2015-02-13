@@ -163,16 +163,20 @@ def main():
     path = args.path
     overwrite = args.overwrite
     
-    regex = r'(?:https?://)(?P<site>[^/]+)/course/introduction/(?P<courseid>[^/]+)\.htm'
-    
-    m = re.match(regex, course_link)  
+    regexs = [r'(?:https?://)study.163.com/course/introduction/(?P<courseid>\d+)\.htm',
+              r'(?:https?://)study.163.com/course/courseMain.htm\?courseId=(?P<courseid>\d+)',
+              r'(?:https?://)study.163.com/course/introduction.htm\?courseId=(?P<courseid>\d+)'
+              ]
+
+    for regex in regexs:
+        m = re.match(regex, course_link)
+        if m is not None:
+            break
 
     if m is None:
         print ('The URL provided is not valid for study.163.com')
         sys.exit(0)
-    if m.group('site') not in ['study.163.com']:
-        print ('The URL provided is not valid for study.163.com')
-        sys.exit(0)   
+
     path = os.path.join(path, m.group('courseid'))         
     headers = {
             'Accept':'*/*',
@@ -209,9 +213,10 @@ def main():
     syllabus = parse_syllabus_study163(session, r.content)
     
     if syllabus:
-        print ('Successful.')
+        print ('Done.')
     else:
-        print ('Failed.')
+        print ('Failed. No course content on the page.')
+        sys.exit(0)
     
     download_syllabus_study163(session, syllabus, path, overwrite)
     

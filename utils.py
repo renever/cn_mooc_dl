@@ -1,7 +1,7 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-This module contains a set of functions to be used by edx-dl.
+This module contains a set of functions to be used by others.
+Some of them are ripped from https://github.com/coursera-dl/
 """
 
 
@@ -262,7 +262,7 @@ def parse_args():
     return args
 
 
-def clean_filename(s, minimal_change=True):
+def clean_filename(s):
     """
     Sanitize a string to be used as a filename.
 
@@ -271,27 +271,13 @@ def clean_filename(s, minimal_change=True):
     '\x00', '\n').
     """
 
-    # strip paren portions which contain trailing time length (...)
     s = s.replace(':', '_') \
         .replace('/', '_')\
-        .replace('\x00', '_')\
-        .replace('\n', '')\
-        .replace('\\','')\
-        .replace('*','')\
-        .replace('>','')\
-        .replace('<','')\
-        .replace('?','')\
-        .replace('\"','')\
-        .replace('|','')\
-        .replace('\t','')
+        .replace('\x00', '_')
 
-    if minimal_change:
-        return s
+    s = re.sub('[\n\\\*><\?\"\|\t]', '', s)
+    s = re.sub(' +$','', s)
+    s = re.sub('^ +','', s)
 
-    s = re.sub(r"\([^\(]*$", '', s)
-    s = s.replace('&nbsp;', '')
-    s = s.replace('?','')
-    s = s.replace('"','\'')
-    s = s.strip().replace(' ', '_')
 
     return s
