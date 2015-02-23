@@ -114,14 +114,14 @@ def parse_syllabus_study163(session, page):
 
         if lesson_info:
 
-            if lesson_info.has_key('courseId'):
+            if ('courseId' in lesson_info) and ('name' in lesson_info):
                 course_id = lesson_info['courseId']
                 if lessons:
                     course.append((cur_chapter, lessons))
                     lessons = []
                 cur_chapter = lesson_info['name'].decode('raw_unicode_escape')
 
-            elif lesson_info.has_key('lessonName'):
+            elif 'lessonName' in lesson_info:
                 params =  {
                         'callCount':'1',
                         'scriptSessionId':'${scriptSessionId}190', #* , but arbitrarily
@@ -145,7 +145,7 @@ def parse_syllabus_study163(session, page):
                 info = dict(re.findall(r"(?P<name>.*?):(?P<value>.*?),", s.group('content')))
                     
                 for res in multi_resolution_flag:
-                    if info.has_key(res) and info[res] != 'null':
+                    if (res in info) and (info[res] != 'null'):
                         lesson_url = info[res].strip('\"')
                         break
   
