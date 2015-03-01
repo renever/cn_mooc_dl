@@ -270,11 +270,11 @@ def parse_syllabus_icourse163(session, page):
                             }
                     r = session.post(geturl_url, data = params, cookies = session.cookies)
 
-                    s4 = re.search(r"{(?P<content>.+)}", r.content)
+                    s4 = re.search(r"{(?P<content>.*contentId.+)}", r.content)
                     info = dict(re.findall(r"(?P<name>.*?):(?P<value>.*?),", s4.group('content')))
                     
                     for res in multi_resolution_flag:
-                        if info.has_key(res) and info[res] != 'null':
+                        if (res in info) and (info[res] != 'null'):
                             lecture_url = info[res].strip('\"')
                             break
                     lectures.append((lecture_url,lecture_name))
