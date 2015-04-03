@@ -89,7 +89,7 @@ def main():
     else:
         print ('Login done...')
     
-    se = re.search('window.location.replace\(\"(.+)\"\)',r1.content)
+    se = re.search('window.location.replace\(\"(http:\/\/reg\.icourse163\.org\/next\.jsp.+)\"\)',r1.content)
         
     r = session.get(se.group(1), allow_redirects=True, cookies = {'NTES_PASSPORT':session.cookies['NTES_PASSPORT']})
 
