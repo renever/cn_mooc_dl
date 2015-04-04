@@ -49,6 +49,7 @@ def main():
                 }
         login_success_flag = '正在登录，请稍等...'
         web_host = 'www.icourse163.org'
+        regex_loc = 'window.location.replace\(\"(http:\/\/reg\.icourse163\.org\/next\.jsp.+)\"\)'
     elif m.group('site') in [ 'mooc.study.163.com']:
         login_data = {
                 'product': 'study',
@@ -62,6 +63,7 @@ def main():
                 }        
         login_success_flag = '登录成功，正在跳转'
         web_host = 'mooc.study.163.com'
+        regex_loc = 'window.location.replace\(\"(http:\/\/study\.163\.com\?from=study)\"\)'
     else:
         print ('The URL provided is not valid for icourse163.')
         sys.exit(0)
@@ -89,7 +91,7 @@ def main():
     else:
         print ('Login done...')
     
-    se = re.search('window.location.replace\(\"(.+)\"\)',r1.content)
+    se = re.search(regex_loc, r1.content)
         
     r = session.get(se.group(1), allow_redirects=True, cookies = {'NTES_PASSPORT':session.cookies['NTES_PASSPORT']})
 
